@@ -1,0 +1,304 @@
+---
+title: <center><FONT COLOR="RED">FÓRMURLA 1 TEMPORADA 2019</FONT></center>
+subtitle: "Bernardo Cartusciello(cartusci@alumni.uv.es)" 
+author: "Universitat de València"
+date: "Diciembre de 2020 (actualizado el `r format(Sys.time(), '%d-%m-%Y')`)"
+output:
+  html_document:
+    #css: "./assets/my_css_file.css"
+    theme: darkly
+    highlight: textmate 
+    toc: true
+    toc_depth: 3 
+    toc_float: 
+      collapsed: true
+      smooth_scroll: true
+    self_contained: true
+    number_sections: false
+    df_print: kable
+    code_download: true
+editor_options: 
+  chunk_output_type: console
+---
+
+```{r packages-setup, include = FALSE}
+library(tidyverse)
+library(klippy)  #- remotes::install_github("rlesur/klippy")
+library(knitr)
+library(rvest)    # For scraping the web
+library(tidyr)    # Functions to tidy our data
+library(dplyr)    # Pipe operator, tibble handling
+library(ggplot2)
+library(readxl)
+library(gganimate)
+library(plotly)
+library(gt)
+library(ggthemes)
+library(leaflet)
+```
+
+```{r chunk-setup, include = FALSE}
+knitr::opts_chunk$set(echo = TRUE, eval = TRUE, message = FALSE, warning = FALSE, 
+                      #results = "hold",
+                      cache = FALSE, cache.path = "/caches/", comment = "#>",
+                      #fig.width = 7, #fig.height= 7,   
+                      #out.width = 7, out.height = 7,
+                      collapse = TRUE,  fig.show = "hold",
+                      fig.asp = 7/9, out.width = "60%", fig.align = "center")
+knitr::opts_chunk$set(dev = "png", dev.args = list(type = "cairo-png"))
+```
+
+```{r options-setup, include = FALSE}
+options(scipen = 999) #- para quitar la notación científica
+options("yaml.eval.expr" = TRUE) 
+```
+
+
+```{r klippy, echo = FALSE}
+klippy::klippy(position = c("top", "right")) #- remotes::install_github("rlesur/klippy")
+```
+
+<hr class="linea-black">
+
+Trabajo elaborado para la asignatura "Programación y manejo de datos en la era del Big Data" de la Universitat de València durante el curso 2020-2021. El repo del trabajo está [aquí](https://github.com/bernicartusciello/trabajo_BigData){target="_blank"}. La página web de la asignatura y los trabajos de mis compañeros pueden verse [aquí](https://perezp44.github.io/intro-ds-20-21-web/07-trabajos.html){target="_blank"}.
+
+<!-- El párrafo de arriba has de dejarlo casi igual, 
+        solo HAS de SUSTITUIR las 2 veces que aparece "perezp44" por tu usuario de Github-->
+
+<hr class="linea-red">
+
+##   <FONT COLOR="red">1. Introducción</FONT>
+
+En este trabajo enseñare los resultados del campeonato mundial de la Formula 1 en el año 2019, donde se podra mostrar un claro dominio por parte de la escudería  Mercedes integrado por los pilots Lewis Hamilton y Valterri Bottas, con respecto al resto de escuderías que no le pudieron hacer frente a estos veloces coches. También resaltaremos diferentes datos interesantes respecto al tema como la ubicación de los circuitos de carrera, el rendimiento de los pilotos de forma individual y de las escuderías.
+
+
+```{r, echo=FALSE,eval=TRUE,  out.width="80%"}
+knitr::include_graphics (here::here( "/imagen","comienzodecarrera.jpg"))
+```
+
+
+##   <FONT COLOR="red">2. Posiciones de los Pilotos </FONT> {.tabset}
+
+
+En la siguiente tabla se destacara a los 9 pilotos que tuvieron una mayor cantidad de puntos comparado a los 20 que compiten a lo largo de la serie mundial. Como se puede apreciar hay nombres de talla mundial como los de Lewis Hamilton y el de su eterno rival Sebastian Vettel que conduce el famoso coche rojo de Ferrari, pero que durante esta temporada no pudo destacar como lo hace habitualmente y termino obtniendo un 5to lugar en la claisifación mundial. Por otro lado se puede apreciar como su compañero de equipo un rookie llamado Charles Leclerc siendo el segundo piloto más joven que ha pertenecido a la escudería de Ferrari haya logrado vencer en su debut al 4 veces campeón mundial de la formula 1.
+
+### <FONT COLOR="red">**Posiciones**</FONT>
+```{r, echo=FALSE, eval=TRUE}
+
+formula_1 <- read_excel("./datos/formula1.xlsx", sheet = 1)
+
+formula_1 <- as_tibble(formula_1) %>% 
+  filter(as.integer(Posicion) <= 9)
+# Make Driver a factorial variable, replace all '-' with zeros, convert to long format
+
+
+knitr::kable(formula_1)
+
+
+
+```
+
+
+### <FONT COLOR="red">**Posiciones de cada Carrera**</FONT>
+
+```{r, echo=FALSE, eval=TRUE}
+formula_1$Piloto <- as.factor(formula_1$Piloto)
+formula_1[, -2] <- apply(formula_1[, -2], 2, function(x) as.integer(gsub('-', '0', as.character(x))))
+
+f1_long <- gather(formula_1, Race, Puntos, R01:R21)
+
+knitr::kable(f1_long)
+
+
+```
+
+##   <FONT COLOR="red">3. Evolución de las Posiciones de los Pilotos</FONT> {.tabset}
+Aquí podemos observar a los 9 corredores que hicieron más puntos a lo largo de la temporada. Observando los altos y bajos que han obtenido a lo largo de las 21 carreras realizadas. Se podrá destacar 2 gráficas donde en la primera se observara el rendimientos de los pilotos en relación de los puntos obtenidos con respecto a cada carrera del campeonato mundial, mientras que en la segunda gráfica se detallara el rednimiento de forma individual de cada piloto. 
+
+### <FONT COLOR="red">**Gráfica**</FONT>
+```{r pressure, echo=FALSE, eval=TRUE,  out.width="80%"}
+f1_long <- gather(formula_1, Race, Puntos, R01:R21)
+
+
+
+g <- ggplot(f1_long, aes(x = Race, y = Puntos, group = Piloto, colour = Piloto)) + 
+  geom_line() +
+  scale_x_discrete(breaks=c('R01', 'R06', 'R11', 'R16', 'R21')) +
+  labs(title = 'F1 resultados 2019, top 9 drivers') + geom_point()
+
+ggplotly(g)
+
+```
+
+
+
+### <FONT COLOR="red">**Gráfica por Piloto**</FONT>
+```{r, echo=FALSE, eval=TRUE,  out.width="80%"}
+f1_long <- gather(formula_1, Race, Puntos, R01:R21)
+
+
+          
+f <- ggplot(f1_long, aes(x = Race, y = Puntos, group = Piloto, colour = Piloto)) + 
+  geom_line(show.legend = FALSE) + facet_wrap(~ Piloto) +
+  scale_x_discrete(breaks=c('R01', 'R06', 'R11', 'R16', 'R21')) +
+  labs(title = 'F1 resultados 2019, top 9 drivers') + geom_point() 
+
+ggplotly(f)
+
+```
+
+
+
+##   <FONT COLOR="red">4. Posiciones de las Escuerías </FONT> {.tabset}
+
+En este apartado del trabajo dejaremos al lado a los pilotos y nos enfocaremos en las escuderías. En el siguiente gráfico se podrá observar de forma ordenada las posiciones que obtuvieron los equipos de la formula 1, con un claro dominio de Mercedes al resto de escuderías obteniendo más de 200 puntos con respecto al segundo lugar. Otro dato interesante que se podría obtener a partir de esta información es que no es coincidencia que la ventaja de los primeros 3 equipos sea tan supeior al resto de las escuderías, ya que el presupuesto que poseen sea mayor al resto. De forma más detallada el equipo de Mercedes tuvo una inversión durante este año de 700 millones, Ferrari de 500 millones, Red Bull de 300 millones y el resto de los 7 participantes su presupuesto no llega ni siquiera a los 150 millones. Por esta razón, la FIA la organización encargada de regular las competiciones de automovilismo deicidió implantar para el 2022 un límite al presupuesto de las escuderías que sería igual a 150 millones, para buscar que exista más competitividad y no de que siempre domine una escudería a lo largo del tiempo, sino para que también los pilotos demuestren su habilidad de conducción al tener coches más similares.
+
+### <FONT COLOR="red">**Tabla de las Escuderías**</FONT>
+```{r, echo=FALSE, eval=TRUE}
+
+escuderia <- read_excel("./datos/formula1.xlsx", sheet = 2)
+
+knitr::kable(escuderia)
+```
+
+```{r, echo=FALSE, eval=FALSE}
+str(escuderia)  #- la v. region es de tipo character
+
+escuderia <- escuderia %>% mutate(Escudería = forcats::as_factor(Escudería))   #- convertimos la v. region en factor con la f. as_factor()
+
+str(escuderia)  #- la v. region ahora es un factor
+levels(escuderia$Escudería) #- los levels del  están ordenador alfabéticamente
+
+escuderia <- escuderia %>% mutate(Escudería = forcats::fct_reorder(Escudería, Puntos)) #- reordenamos los niveles del factor en f. de Pob_region
+
+levels(escuderia$Escudería) #- ahora los levels del factor estan ordenador en funcion de la población
+
+
+
+
+
+```
+
+### <FONT COLOR="red">**Gráfico de las Escuderías**</FONT>
+```{r, echo=FALSE, eval=TRUE,  out.width="80%"}
+escuderia <- escuderia %>% mutate(Escudería = forcats::fct_reorder(Escudería, Puntos))
+
+levels(escuderia$Escudería)
+
+ggplot(escuderia, aes(x = Puntos, y = Escudería)) + geom_col(fill = c("cyan", "red","darkblue","orange", "yellow", "steelblue", "pink", "brown1", "chocolate4", "darkgray")) + geom_text(aes(label = Puntos), nudge_x = 25) 
+
+```
+
+
+
+
+##   <FONT COLOR="RED">5. Mapa de los Circuitos de la F1 </FONT>
+
+Aquí se puede observar un mapa de los 21 circuitos que pertenecen al mundial de la Formula 1. Como se puede ver en el mapa de la formula 1, los grandes premios se realizan en diferentes partes del mundo para que los aficionados no tengan que trasladarse a un único país para observar estas carreras, sino que ofrecen esta oportunidad para que las diferentes culturas del mundo se unan a este deporte y lo puedan apreciar. Lo normal de esto grandes premios es que se celebre una carrera por país por las razones mencionadas anteriormente. Por otro lado se puede destacar, como los circuitos se encuentran ubicados en diferentes continentes como América del Norte y del Sur, Europa, Asia, Oceanía, pero en el único continente que no incluye en sus competiciones es África, por lo cual es fuertemente críticado.
+```{r eval = TRUE, echo = FALSE,  out.width="80%"}
+
+p <- leaflet() %>%
+  addTiles() %>% 
+  setView(lng = -2.435973, lat = 52.378051, zoom = 1) %>% 
+  addMarkers(lng = 50.514521, lat = 26.031699, popup = "GP BAHREIN") %>% 
+  addMarkers(lng = 144.96326, lat = -37.84476, popup = "GP AUSTRALIA") %>%
+  addMarkers(lng = 121.21972, lat = 31.33889, popup = "GP CHINA") %>%
+  addMarkers(lng = 49.89201, lat = 40.37767, popup = "GP AZERBAIYÁN") %>%
+  addMarkers(lng = 2.258063, lat = 41.569469, popup = "GP ESPAÑA") %>%
+  addMarkers(lng = 7.42732, lat = 43.73976 , popup = "GP MONACO") %>%
+  addMarkers(lng = -73.52417, lat = 45.50838, popup = "GP CANADA") %>%
+  addMarkers(lng =  5.79177, lat = 43.25364, popup = "GP FRANCIA") %>%
+  addMarkers(lng = 14.764316, lat = 47.222131, popup = "GP AUSTRIA") %>%
+  addMarkers(lng = -1.014299, lat = 52.071812, popup = "GP INGLATERRA") %>%
+  addMarkers(lng =  8.566751, lat = 49.327317, popup = "GP ALEMANIA") %>%
+  addMarkers(lng = 19.1501, lat = 47.3450, popup = "GP HUNGRIA") %>%
+  addMarkers(lng = 5.96837, lat = 50.44474, popup = "GP BELGICA") %>%
+  addMarkers(lng = 9.282641, lat = 45.619106, popup = "GP ITALIA") %>%
+  addMarkers(lng = 103.86395, lat = 1.29156, popup = "GP SINGAPUR") %>%
+  addMarkers(lng = 39.72569, lat = 43.59917, popup = "GP RUSIA") %>%
+  addMarkers(lng =  136.541839, lat =  34.845207 , popup = "GP JAPON") %>%
+  addMarkers(lng = -99.092238, lat = 19.40337, popup = "GP MEXICO") %>%
+  addMarkers(lng = -97.636409, lat = 30.134414, popup = "GP ESTADOS UNIDOS") %>%
+  addMarkers(lng = -46.69717, lat = -23.700522, popup = "GP BRASIL")
+
+p
+
+```
+
+##   <FONT COLOR="red">6.Datos Interesantes </FONT>  {.tabset}
+
+Entre los datos interesantes se podran destacar una serie de variables importantes que obtuvieron los pilotos a lo largo de este año. Entre entas variables encontraremos el número de vicotrias que obtuvieron al igual que los podios que siginifica cuando terminas entre los 3 primeros, también destacaremos las poles que es cuando en la ronda de clasificación para obtener el orden de salida en una carrera, el piloto que se clasifica de primero se gana lo que se llama una "pole position" y por último destacaremos lo que sería las vueltas rápidas que es cuando a lo largo de la carrera el piloto que haga la vuelta más rápida se gana 1 punto más para el mundial.
+
+Con respecto a la relación entre vicotrias y podios se puede apreciar como Lewis Hamilton fue el gran dominante con respecto a estas 2 variables obteniendo un total de 11 victorias y 17 podios. Dos casos especiales serían el Charles Leclerc y Max Verstappen, el primero obtuvo un total 10 podios siendo supeior a su rival Verstappen, pero este obtuvo una vicotria más que Leclerc provocando que en la clasificatoria mundial Verstappen quedar una posición arriba que Leclerc.
+
+Con la otra gráfica relación entre Victorias y Poles, es bastante inusual que Lewis Hamilton no haya logrado dominar en las 2 variables como sucedió en la anterior gráfica, sino que el piloto que obtuvo más poles fue Charles Leclerc lo cual es bastante inusual de ver en la segunda temporada de un piloto de formula 1, pero esto no le basto para poder obtener una mayor cantidad de victorias durante este año. 
+
+### <FONT COLOR="red">**Tabla**</FONT>
+```{r, echo=FALSE, eval=TRUE}
+
+datos_interesantes <- read_excel("./datos/formula1.xlsx", sheet = 3)
+
+knitr::kable(datos_interesantes)
+```
+
+
+### <FONT COLOR="red">**Relación entre Victorias y Podios**</FONT>
+```{r, echo=FALSE, eval=TRUE,  out.width="80%"}
+
+ggplot(datos_interesantes, aes(x = Victorias, y = Podios, color = Piloto)) + geom_point() +
+scale_x_continuous(trans='log10', labels = scales::comma) +
+ggrepel::geom_label_repel(ggplot2::aes(label = Piloto)) + labs(title = "RELACIÓN ENTRE LAS VICTORIAS Y PODIOS DE LOS PILOTOS DE F1" , y = "Podios", x = "Victorias") +
+theme_bw() +  theme(legend.position = "none") +  theme(plot.title = element_text(hjust = 0.5)) +  theme(plot.subtitle = element_text(hjust = 0.5))
+```
+
+### <FONT COLOR="red">**Relación entre Vicotiras y Poles**</FONT>
+```{r, echo=FALSE, eval=TRUE,  out.width="80%"}
+
+p <- ggplot(datos_interesantes, aes(x = Victorias, y = Poles, color = Piloto)) + geom_point() +
+scale_x_continuous(trans='log10', labels = scales::comma) +
+ggrepel::geom_label_repel(ggplot2::aes(label = Piloto)) + labs(title = "RELACIÓN ENTRE LAS VICTORIAS Y POLES DE LOS PILOTOS DE F1" , y = "Poles", x = "Victorias") +
+theme_bw() +  theme(legend.position = "none") +  theme(plot.title = element_text(hjust = 0.5)) +  theme(plot.subtitle = element_text(hjust = 0.5))
+
+
+
+```
+
+
+```{r, echo=FALSE, eval=TRUE,  out.width="80%"}
+
+ggplotly(p)
+
+```
+
+##   <FONT COLOR="red">7. Imagen </FONT> 
+ En está imagen podemos apreciar la fuerte competitivdiad que había entre las escudería de Ferrari y Mercedes que estaban pelando para ganar el campeonato mundial. De forma más detallada, se puede observar como en el Gran Premio de Rusia, Charles Leclerc esta compitiendo contra Lewis Hamilton para poder ganar este apreciado Premio. 
+ 
+```{r, echo=FALSE, eval=TRUE,  out.width="80%"}
+knitr::include_graphics (here::here( "/imagen","ferrarivsmercedes.jpg"))
+
+```
+
+
+
+
+##  <FONT COLOR="red">8. Conclusión</FONT>
+
+Dentro del trabajo realizado, al final se puede observar como Lewis Hamilton logro conquistar por sexta vez el título mundial de la Formula 1. Además, se pudo observar como logro superar a su compañero de equipo Valtteri Bottas por más de 100 puntos que obtuvo el segundo lugar en la clasificación general. También se puede destacar que este año hay muchos pilotos jóvenes que tienen un gran futuro por delante en esta gran competeción como lo ha demostrado Max Verstappen, Charles Leclerc o Pierre Gasly, con sus incríbles cantidad de puntos y de los cuales los dos primeros lograron vencer a sus compañeros de equipos.
+
+```{r, echo=FALSE, eval=TRUE,  out.width="80%"}
+knitr::include_graphics (here::here( "/imagen","hamiltonganandolaultimacarrera.jpg"))
+
+```
+
+##   <FONT COLOR="red">9. Referencias </FONT> 
+"https://www.sqlservercentral.com/articles/analyzing-formula-1-results-in-r"
+
+"https://es.wikipedia.org/wiki/Temporada_2019_de_F%C3%B3rmula_1"
+
+
+
+
+
+
+
+
